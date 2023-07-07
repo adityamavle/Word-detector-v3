@@ -1,3 +1,8 @@
+#doctr-v3-finetune specific files to ignore
+*.json
+*.zip
+data/
+/data/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
