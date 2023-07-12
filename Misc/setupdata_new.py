@@ -11,23 +11,22 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument("--pathd",
                     help="Path to dataset",
-                    type=str, default="./Consortium_dataset/")
+                    type=str, default="/home/ndli19/docvisor/Consortium_dataset/")
 parser.add_argument("--pathj",
                     help="Path to json",
-                    type=str, default="./sorted_recalls_docs.json")
+                    type=str, default="/home/ndli19/docvisor/reclists/reclistsimage_recall_list_finetuned_db_resnet50.json")  # to be copied
 parser.add_argument("--paths",
                     help="Path to save files",
-                    type=str, default="./newfolder")
+                    type=str, default="/home/ndli19/docvisor/consort_data/")
 parser.add_argument("--pathg",
                     help="Path to ground truth",
-                    type=str, default="GT/docvisor_consortium_gt/")
+                    type=str, default="/home/ndli19/docvisor/docvisor_consortium_gt/Filtered_GT/")
 parser.add_argument("--ext",
                     help="Extension of files to be considered (supports one at this moment)",
                     type=str, default='tif')
 parser.add_argument("--cutoffs",
                     help='list of two cutoffs for dividing into easy, medium, hard',
                     nargs='+', type=float, default=[10, 40])
-#0.63 0.45
 parser.add_argument("--languages",
                     help='list of languages in dataset/to be used in current run',
                     nargs='+', type=str, default=["Assamese", "Bangla", "Gujarati", "Gurumukhi", "Hindi", "Kannada", "Malayalam", "Manipuri", "Marathi", "Oriya", "Tamil", "Telugu", "Urdu"])
@@ -54,11 +53,12 @@ languages = args.languages
 # reg under consideration. Either word or line
 regiondecision = args.region
 split = args.split
+
 # loading all ground truths for languages
 print('Loading ground truths....')
 data = {}
 for language in languages:
-    path_to_groundtruth = "GT/docvisor_consortium_gt/"+language + ".json"
+    path_to_groundtruth = path_to_groundtruth+language + ".json"
     f = open(path_to_groundtruth)
     data[language] = json.load(f)
 
@@ -145,7 +145,7 @@ hardlist = docs[cutoffs[1]:]
 random.shuffle(easylist)
 random.shuffle(mediumlist)
 random.shuffle(hardlist)
-
+print('Check contents of hardlist',hardlist[0:10])
 traineasy = easylist[:math.floor(len(easylist)*split[0]/100)]
 val = easylist[math.floor(len(easylist)*split[0]/100)
                           :math.floor(len(easylist)*(split[0]+split[1])/100)]
@@ -160,6 +160,7 @@ trainhard = hardlist[:math.floor(len(hardlist)*split[0]/100)]
 val = val + hardlist[math.floor(len(hardlist)*split[0]/100)
                                 :math.floor(len(hardlist)*(split[0]+split[1])/100)]
 test = test + hardlist[math.floor(len(hardlist)*(split[0]+split[1])/100):]
+
 
 print("starting train hard")
 labels = {}

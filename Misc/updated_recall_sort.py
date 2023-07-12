@@ -1,11 +1,3 @@
-
-# Goal: 
-# take default model, OR fine tuned model
-# sort based on recall/iou and make a json list with recall, precision, image name, pred
-# makes recall lists
-# Might need to run this if entire dataset is needed for evaluation metrics. Otherwise we can use the already computed ones
-
-
 import glob
 import json
 import random
@@ -26,29 +18,29 @@ from collections import OrderedDict
 
 #arguments taken from terminal
 parser = argparse.ArgumentParser()
-parser.add_argument("--k", 
-            help="Number of documents in Easy/Medium/Hard", 
+parser.add_argument("--k",
+            help="Number of documents in Easy/Medium/Hard",
             type=int, default=20)
-parser.add_argument("--ext", 
-            help="Extension of files to be considered (supports one at this moment)", 
+parser.add_argument("--ext",
+            help="Extension of files to be considered (supports one at this moment)",
             type=str, default='tif')
 parser.add_argument("--languages",
             help='list of languages in dataset/to be used in current run',
             nargs='+',type=str, default = ["Assamese","Bangla","Gujarati","Gurumukhi","Hindi","Kannada","Malayalam","Manipuri","Marathi","Oriya","Tamil","Telugu"])
-parser.add_argument("--test", 
-            help="Is this running locally (for testing)", 
+parser.add_argument("--test",
+            help="Is this running locally (for testing)",
             type=bool, default=0)
-parser.add_argument("--pathd", 
-            help="Path to dataset", 
-            type=str, default="/scratch/sreevatsa/scratch/abhaynew/newfolder/test/images/")
-parser.add_argument("--pathg", 
-            help="Path to ground truth", 
-            type=str, default='/scratch/sreevatsa/scratch/abhaynew/newfolder/test/labels.json')
-parser.add_argument("--paths", 
-            help="Path to save files", 
-            type=str, default='/home2/sreevatsa/reclists')
+parser.add_argument("--pathd",
+            help="Path to dataset",
+            type=str, default="/scratch/sreevatsa/merged_newdata/merged_newdata")
+parser.add_argument("--pathg",
+            help="Path to ground truth",
+            type=str, default='/scratch/sreevatsa/merged_newdata/merged_newdata_json.json')
+parser.add_argument("--paths",
+            help="Path to save files",
+            type=str, default='/share3/sreevatsa/reclists')
 parser.add_argument("--region",
-            help="Region of interest (line or word)", 
+            help="Region of interest (line or word)",
             type=str, default='word')
 parser.add_argument("--iouthresholds",
             help='list of IoU thresholds for determining True/False positives',
@@ -62,7 +54,7 @@ args = parser.parse_args()
 K = args.k
 #extension of image to be considered
 ext = args.ext
-#re under consideration. Either word or line
+#region under consideration. Either word or line
 regiondecision = args.region
 #paths to different folders
 path_to_dataset = args.pathd
@@ -85,7 +77,8 @@ print(f'IoU thresholds ={iouthresholds}')
 print(f'Test ={test}')
 print()
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu") #there was an error in this that there were no
+#gpus available hence device = cpu
 
 predictor = []
 if isinstance(args.resume, str):
@@ -105,7 +98,7 @@ else:
 #changed to add iou_threshold
 # def get_precision_recall(gt, pred, iou_threshold):
 #     matrix = torchvision.ops.box_iou(gt,pred).numpy()
-#     try:    
+#     try:
 #         max_iou_gt = np.max(matrix, axis=1)
 #         max_iou_pred = np.max(matrix, axis=0)
 
@@ -114,26 +107,26 @@ else:
 #         FN = np.sum(max_iou_gt<iou_threshold)
 
 #         return TP/(TP+FN), TP/(TP+FP)
-        
+
 #     except IndexError:
-#         pass    
+#         pass
 
 def get_precision_recall(gt, pred, iou_threshold):
     gt = torch.Tensor(gt)
     pred = torch.Tensor(pred)
-    
+
     if len(gt) == 0 or len(pred) == 0:
         return 0, 0
-    
+
     # if gt.dim() != 2 or gt.size(1) != 4:
     #     raise ValueError("Invalid shape for gt. Expected (N, 4).")
-    
+
     # if pred.dim() != 2 or pred.size(1) != 4:
     #     raise ValueError("Invalid shape for pred. Expected (N, 4).")
-    
+
     if gt.dim() != 2 or gt.size(1) != 4:
         pass
-    
+
     if pred.dim() != 2 or pred.size(1) != 4:
         pass
 
@@ -141,9 +134,14 @@ def get_precision_recall(gt, pred, iou_threshold):
     max_iou_gt = np.max(matrix, axis=1)
     max_iou_pred = np.max(matrix, axis=0)
 
+    #weighted metric
     TP = np.sum((max_iou_pred > iou_threshold) * max_iou_pred)
     FP = max_iou_pred.shape[0] - np.sum(max_iou_pred > iou_threshold)
     FN = np.sum(max_iou_gt < iou_threshold)
+
+    # TP = np.sum(max_iou_pred>iou_threshold)
+    # FP = max_iou_pred.shape[0] - TP
+    # FN = np.sum(max_iou_gt<iou_threshold)
 
     return TP / (TP + FN), TP / (TP + FP)
 
@@ -152,26 +150,26 @@ def doctr_predictions(directory, regionLabel):
     doc = DocumentFile.from_images(directory)
     result = predictor(doc)
     dic = result.export()
-    
+
     page_dims = [page['dimensions'] for page in dic['pages']]
-    
+
     regions = []
     abs_coords = []
     if regionLabel == 'word':
         regions = [[word for block in page['blocks'] for line in block['lines'] for word in line['words']] for page in dic['pages']]
         abs_coords = [
-        [[int(round(word['geometry'][0][0] * dims[1])), 
-          int(round(word['geometry'][0][1] * dims[0])), 
-          int(round(word['geometry'][1][0] * dims[1])), 
+        [[int(round(word['geometry'][0][0] * dims[1])),
+          int(round(word['geometry'][0][1] * dims[0])),
+          int(round(word['geometry'][1][0] * dims[1])),
           int(round(word['geometry'][1][1] * dims[0]))] for word in words]
         for words, dims in zip(regions, page_dims)
         ]
     elif regionLabel == 'line':
         regions = [[line for block in page['blocks'] for line in block['lines']] for page in dic['pages']]
         abs_coords = [
-        [[int(round(line['geometry'][0][0] * dims[1])), 
-          int(round(line['geometry'][0][1] * dims[0])), 
-          int(round(line['geometry'][1][0] * dims[1])), 
+        [[int(round(line['geometry'][0][0] * dims[1])),
+          int(round(line['geometry'][0][1] * dims[0])),
+          int(round(line['geometry'][1][0] * dims[1])),
           int(round(line['geometry'][1][1] * dims[0]))] for line in lines]
         for lines, dims in zip(regions, page_dims)
         ]
@@ -189,7 +187,7 @@ def generate_jsons(difficulty, dictionary, regiondecision,metadata, language):
         outfile = open(path_to_save + 'Jsons/RegionData/'+jsonname,"w")
         json.dump(docvisor_dic, outfile, indent = 6)
         outfile.close()
-        
+
         metadata["metaData"]["dataPaths"][difficulty + " " + language + " - iou " + str(iou)] = "Jsons/RegionData/" + jsonname
 
 
@@ -201,11 +199,18 @@ f = open(path_to_groundtruth)
 data = json.load(f)
 f.close()
 
+exts = args.ext.split(',')
+
+print(exts)
 dirs = []
 for root,d_names,f_names in os.walk(path_to_dataset):
     for f in f_names:
-        if(f[-len(ext):] == ext):
-            dirs.append(os.path.join(root, f))
+        # # if(f[-len(ext):] == ext):
+        # dirs.append(os.path.join(root, f))
+        for ext in exts:
+            if f.endswith(ext):
+                dirs.append(os.path.join(root, f))
+                break
 
 print(f"Running for test dataset....")
 
@@ -221,17 +226,19 @@ for c,directory in tqdm(enumerate(dirs)):
         print('Got preds')
 
     gt = []
-    for i,region in enumerate(data[test_img_path]["polygons"]):
-        p1 = region[0]
-        p2 = region[2]
-        gt.append([p1[0],p1[1],p2[0],p2[1]])
+    for i, word in enumerate(data[test_img_path]['words']):
+        gt.append(word['groundTruth'])
+    # for i,region in enumerate(data[test_img_path]["polygons"]):
+    #     p1 = region[0]
+    #     p2 = region[2]
+    #     gt.append([p1[0],p1[1],p2[0],p2[1]])
     gt = torch.Tensor(gt)
 
     if(c%100 == 0):
         print('Got gts')
 
     iou = iouthresholds[0]
-    rec, pre = get_precision_recall(gt,pred,iou) 
+    rec, pre = get_precision_recall(gt,pred,iou)
     # print(type(gt),type(pred))
     print(gt.size(),pred.size())
 
@@ -248,7 +255,7 @@ res = ''
 if isinstance(args.resume, str):
     file_name = os.path.basename(args.resume)
     exp_name = file_name[:file_name.find("_epoch")]
-    res = '_finetuned_' + exp_name
+    res = '_finetuned_' + exp_name + "neeeew_data_2"
 outfile = open(path_to_save + "image_recall_list" + res +".json","w")
 json.dump(image_recall_list, outfile, indent = 6)
 outfile.close()

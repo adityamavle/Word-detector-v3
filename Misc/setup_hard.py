@@ -11,23 +11,22 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument("--pathd",
                     help="Path to dataset",
-                    type=str, default="./Consortium_dataset/")
+                    type=str, default="/home/ndli19/docvisor/Consortium_dataset/")
 parser.add_argument("--pathj",
                     help="Path to json",
-                    type=str, default="./sorted_recalls_docs.json")
+                    type=str, default="/home/ndli19/docvisor/reclists/reclistsimage_recall_list_finetuned_db_resnet50.json")  # to be copied
 parser.add_argument("--paths",
                     help="Path to save files",
-                    type=str, default="./newfolder")
+                    type=str, default="/home/ndli19/docvisor/Consort_Hard/Hard_all")
 parser.add_argument("--pathg",
                     help="Path to ground truth",
-                    type=str, default="GT/docvisor_consortium_gt/")
+                    type=str, default="/home/ndli19/docvisor/docvisor_consortium_gt/Filtered_GT/")
 parser.add_argument("--ext",
                     help="Extension of files to be considered (supports one at this moment)",
                     type=str, default='tif')
 parser.add_argument("--cutoffs",
                     help='list of two cutoffs for dividing into easy, medium, hard',
                     nargs='+', type=float, default=[10, 40])
-#0.63 0.45
 parser.add_argument("--languages",
                     help='list of languages in dataset/to be used in current run',
                     nargs='+', type=str, default=["Assamese", "Bangla", "Gujarati", "Gurumukhi", "Hindi", "Kannada", "Malayalam", "Manipuri", "Marathi", "Oriya", "Tamil", "Telugu", "Urdu"])
@@ -54,18 +53,19 @@ languages = args.languages
 # reg under consideration. Either word or line
 regiondecision = args.region
 split = args.split
+
 # loading all ground truths for languages
 print('Loading ground truths....')
 data = {}
 for language in languages:
-    path_to_groundtruth = "GT/docvisor_consortium_gt/"+language + ".json"
-    f = open(path_to_groundtruth)
+    path_to_ground = path_to_groundtruth+language + "_filtered" + ".json"
+    f = open(path_to_ground)
     data[language] = json.load(f)
 
 # makes the labels for training
 
 
-def make_labels(impath, labels):
+def make_labels(impath, labels, i):
     img = Image.open(impath)
 
     # get width and height
@@ -73,54 +73,24 @@ def make_labels(impath, labels):
     height = img.height
 
     dimensions = img.size
-
-    # display width and height
-    # print("dimensions: ",dimensions)
-    # print("The height of the image is: ", height)
-    # print("The width of the image is: ", width)
-
     readable_hash = ""
     with open(impath, "rb") as f:
         bytes = f.read()  # read entire file as bytes
         readable_hash = hashlib.sha256(bytes).hexdigest()
-        # print(type(readable_hash))
-
-    ans_key = ""
-
     test_img_path = os.path.basename(impath)
-
-    for language in languages:
-        image_keys = list(data[language].keys())
-        for k in image_keys:
-            path = os.path.basename(data[language][k]["imagePath"])
-            if path == test_img_path:
-                ans_key = k
-                break
-
-        if ans_key != "":
-            break
-
-    if ans_key == "":
-        print('something is wrong1')
-
-    regions = []
-    for i, region in enumerate(data[language][ans_key]["regions"]):
-        if region["regionLabel"] == regiondecision:
-            regions.append(region["groundTruth"])
-    # print(regions)
-
     labels[test_img_path] = {
         'img_dimensions': dimensions,
         'img_hash': readable_hash,
-        'polygons': regions
+        'polygons': data[i][3]
     }
 
 
 f = open(path_to_json)
 all_recalls_docs = json.load(f)
 f.close()
-docs = [document_path for (recall, document_path) in all_recalls_docs]
-
+# docs = [document_path for (recall,precision,document_path,polygons) in all_recalls_docs]
+docs = [element[2] for element in all_recalls_docs]
+print(docs[1])
 print('making the files and folders...')
 if os.path.isdir(path_to_save):
     shutil.rmtree(path_to_save)
@@ -138,34 +108,34 @@ os.mkdir(path_to_save + '/train/Easy/images')
 os.mkdir(path_to_save + '/train/Medium/images')
 os.mkdir(path_to_save + '/train/Hard/images')
 
-easylist = docs[:cutoffs[0]]
-mediumlist = docs[cutoffs[0]:cutoffs[1]]
-hardlist = docs[cutoffs[1]:]
+cut_off_1 = 0.1
+cut_off_2 = 0.4
+easylist = [item[2] for item in data if float(item[0]) > cut_off_2]
+mediumlist = [item[2] for item in data if float(
+    item[0]) > cut_off_1 and float(item[0]) <= cut_off_2]
+hardlist = [item[2] for item in data if float(item[0]) <= cut_off_1]
 
 random.shuffle(easylist)
 random.shuffle(mediumlist)
 random.shuffle(hardlist)
 
 traineasy = easylist[:math.floor(len(easylist)*split[0]/100)]
-val = easylist[math.floor(len(easylist)*split[0]/100)
-                          :math.floor(len(easylist)*(split[0]+split[1])/100)]
+val = easylist[math.floor(len(easylist)*split[0]/100)               :math.floor(len(easylist)*(split[0]+split[1])/100)]
 test = easylist[math.floor(len(easylist)*(split[0]+split[1])/100):]
 
 trainmedium = mediumlist[:math.floor(len(mediumlist)*split[0]/100)]
-val = val + mediumlist[math.floor(len(mediumlist)*split[0]/100)
-                                  :math.floor(len(mediumlist)*(split[0]+split[1])/100)]
+val = val + mediumlist[math.floor(len(mediumlist)*split[0]/100)                       :math.floor(len(mediumlist)*(split[0]+split[1])/100)]
 test = test + mediumlist[math.floor(len(mediumlist)*(split[0]+split[1])/100):]
 
 trainhard = hardlist[:math.floor(len(hardlist)*split[0]/100)]
-val = val + hardlist[math.floor(len(hardlist)*split[0]/100)
-                                :math.floor(len(hardlist)*(split[0]+split[1])/100)]
+val = val + hardlist[math.floor(len(hardlist)*split[0]/100)                     :math.floor(len(hardlist)*(split[0]+split[1])/100)]
 test = test + hardlist[math.floor(len(hardlist)*(split[0]+split[1])/100):]
 
 print("starting train hard")
 labels = {}
-for tiffile in traineasy:
+for i, tiffile in enumerate(trainhard):
     shutil.copy(tiffile, path_to_save + '/train/Hard/images')
-    make_labels(tiffile, labels)
+    make_labels(tiffile, labels, i)
 
 outfile = open(path_to_save + '/train/Hard/labels.json', "w")
 json.dump(labels, outfile, indent=6)
@@ -173,9 +143,9 @@ outfile.close()
 
 print("starting train medium")
 labels = {}
-for tiffile in trainmedium:
+for i, tiffile in enumerate(trainmedium):
     shutil.copy(tiffile, path_to_save + '/train/Medium/images')
-    make_labels(tiffile, labels)
+    make_labels(tiffile, labels, i)
 
 outfile = open(path_to_save + '/train/Medium/labels.json', "w")
 json.dump(labels, outfile, indent=6)
@@ -183,9 +153,9 @@ outfile.close()
 
 print("starting train easy")
 labels = {}
-for tiffile in trainhard:
+for i, tiffile in enumerate(traineasy):
     shutil.copy(tiffile, path_to_save + '/train/Easy/images')
-    make_labels(tiffile, labels)
+    make_labels(tiffile, labels, i)
 
 outfile = open(path_to_save + '/train/Easy/labels.json', "w")
 json.dump(labels, outfile, indent=6)
@@ -193,9 +163,9 @@ outfile.close()
 
 print("starting val")
 labels = {}
-for tiffile in val:
+for i, tiffile in enumerate(val):
     shutil.copy(tiffile, path_to_save + '/val/images')
-    make_labels(tiffile, labels)
+    make_labels(tiffile, labels, i)
 
 outfile = open(path_to_save + '/val/labels.json', "w")
 json.dump(labels, outfile, indent=6)
@@ -203,9 +173,9 @@ outfile.close()
 
 print("starting test")
 labels = {}
-for tiffile in test:
+for i, tiffile in enumerate(test):
     shutil.copy(tiffile, path_to_save + '/test/images')
-    make_labels(tiffile, labels)
+    make_labels(tiffile, labels, i)
 
 outfile = open(path_to_save + '/test/labels.json', "w")
 json.dump(labels, outfile, indent=6)

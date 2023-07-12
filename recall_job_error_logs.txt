@@ -1,0 +1,35 @@
+SLURM_JOB_ID = 936831
+SLURM_NODELIST = gnode040
+SLURM_JOB_GPUS = 0,1
+==========================================
+Starting....
+/home2/sreevatsa/.local/lib/python3.6/site-packages/torch/cuda/__init__.py:80: UserWarning: CUDA initialization: CUDA unknown error - this may be due to an incorrectly set up environment, e.g. changing env variable CUDA_VISIBLE_DEVICES after program start. Setting the available devices to be zero. (Triggered internally at  ../c10/cuda/CUDAFunctions.cpp:112.)
+  return torch._C._cuda_getDeviceCount() > 0
+K =20
+extension =jpg,png,jpeg
+decision region =word
+path to dataset =/scratch/sreevatsa/merged_newdata/merged_newdata
+path to ground truth =/scratch/sreevatsa/merged_newdata/merged_newdata_json.json
+path to save files =/share3/sreevatsa/reclists
+languages =['Assamese', 'Bangla', 'Gujarati', 'Gurumukhi', 'Hindi', 'Kannada', 'Malayalam', 'Manipuri', 'Marathi', 'Oriya', 'Tamil', 'Telugu']
+IoU thresholds =[0.6]
+Test =0
+
+Traceback (most recent call last):
+  File "/home2/sreevatsa/docTR/Misc/recallsort_model_1.py", line 94, in <module>
+    state_dict = torch.load(args.resume)
+  File "/home2/sreevatsa/.local/lib/python3.6/site-packages/torch/serialization.py", line 607, in load
+    return _load(opened_zipfile, map_location, pickle_module, **pickle_load_args)
+  File "/home2/sreevatsa/.local/lib/python3.6/site-packages/torch/serialization.py", line 882, in _load
+    result = unpickler.load()
+  File "/home2/sreevatsa/.local/lib/python3.6/site-packages/torch/serialization.py", line 857, in persistent_load
+    load_tensor(data_type, size, key, _maybe_decode_ascii(location))
+  File "/home2/sreevatsa/.local/lib/python3.6/site-packages/torch/serialization.py", line 846, in load_tensor
+    loaded_storages[key] = restore_location(storage, location)
+  File "/home2/sreevatsa/.local/lib/python3.6/site-packages/torch/serialization.py", line 175, in default_restore_location
+    result = fn(storage, location)
+  File "/home2/sreevatsa/.local/lib/python3.6/site-packages/torch/serialization.py", line 151, in _cuda_deserialize
+    device = validate_cuda_device(location)
+  File "/home2/sreevatsa/.local/lib/python3.6/site-packages/torch/serialization.py", line 135, in validate_cuda_device
+    raise RuntimeError('Attempting to deserialize object on a CUDA '
+RuntimeError: Attempting to deserialize object on a CUDA device but torch.cuda.is_available() is False. If you are running on a CPU-only machine, please use torch.load with map_location=torch.device('cpu') to map your storages to the CPU.

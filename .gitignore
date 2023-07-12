@@ -7,9 +7,14 @@ data/
 __pycache__/
 *.py[cod]
 *$py.class
-
+/merged_pngs
 # C extensions
 *.so
+/jsons/
+jsons/
+/merged_newdata/
+merged_newdata/
+
 
 # Distribution / packaging
 .Python
