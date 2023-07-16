@@ -1,6 +1,9 @@
 #doctr-v3-finetune specific files to ignore
 *.json
 *.zip
+*.png 
+*.jpg
+*.jpeg
 data/
 /data/
 # Byte-compiled / optimized / DLL files
@@ -14,8 +17,8 @@ __pycache__/
 jsons/
 /merged_newdata/
 merged_newdata/
-
-
+new_data/
+/new_data/
 # Distribution / packaging
 .Python
 build/

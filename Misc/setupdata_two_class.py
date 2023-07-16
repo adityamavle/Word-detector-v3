@@ -8,19 +8,19 @@ import argparse
 import random
 import math
 parser = argparse.ArgumentParser()
-import json
 parser.add_argument("--pathd",
                     help="Path to dataset",
-                    type=str, default="./merged_newdata/")
+                    type=str, default="D:\Robust-Detector-Dataset-Prep\clipped_new_data")
+parser.add_argument("--pathr",
+                    help="Path to recall json",
+                    type=str, default="./jsons/clipped_recall_list.json")
 parser.add_argument("--pathj",
-                    help="Path to json",
-                    type=str, default="./jsons/new_weighted_recall_list.json")
+                    help="Path to gt json",
+                    type=str, default="./jsons/clipped_newdata.json")
 parser.add_argument("--paths",
                     help="Path to save files",
-                    type=str, default="./test_setup")
-parser.add_argument("--pathg",
-                    help="Path to ground truth",
-                    type=str, default="GT/docvisor_consortium_gt/")  # ground truth's are in the merged newdata.json
+                    type=str, default=r"D:\Robust-Detector-Dataset-Prep\test_setup")
+# ground truth's are in the merged newdata.json
 # as well as recallistsimage_recall_list #not using the original structure of 'GT/docvisor_consortium_gt/Assamese.json' that is language wise
 parser.add_argument("--ext",
                     help="Extension of files to be considered (supports one at this moment)",
@@ -45,6 +45,8 @@ ext = args.ext
 # paths to different folders
 path_to_dataset = args.pathd
 path_to_json = args.pathj
+path_to_recall_json = args.pathr
+
 # path_to_groundtruth = args.pathg
 path_to_save = args.paths
 # iou values to consider
@@ -112,22 +114,22 @@ def make_labels(impath, labels, i):
     labels[test_img_path] = {
         'img_dimensions': dimensions,
         'img_hash': readable_hash,
-        'polygons': data[i][3]
+        'polygons': data[test_img_path]['polygons']
     }
 
 
-f = open(path_to_json)
+f = open(path_to_recall_json)
 all_recalls_docs = json.load(f)
 f.close()
 # docs = [document_path for (recall, document_path) in all_recalls_docs] #this works for list of tuples
 
-docs = [element[2] for element in data]
+docs = [element[2] for element in all_recalls_docs]
 print(docs[1])
 print('making the files and folders...')
-if os.path.isdir(path_to_save):
-    shutil.rmtree(path_to_save)
+# if os.path.isdir(path_to_save):
+#     shutil.rmtree(path_to_save)
 
-os.mkdir(path_to_save)
+# os.mkdir(path_to_save)
 os.mkdir(path_to_save + '/train/')
 os.mkdir(path_to_save + '/val/')
 os.mkdir(path_to_save + '/val/images')
@@ -144,21 +146,19 @@ os.mkdir(path_to_save + '/train/Hard/images')
 # # mediumlist = docs[cutoffs[0]:cutoffs[1]]
 # hardlist = all_recalls_docs[cutoffs[1]:]
 
-cut_off = 0.8
-print(data[2])
-easylist = [item[2] for item in data if item[0] > cut_off]
-hardlist = [item[2] for item in data if item[0] <= cut_off]
+cut_off = 0.7
+easylist = [item[2] for item in all_recalls_docs if item[0] > cut_off]
+hardlist = [item[2] for item in all_recalls_docs if item[0] <= cut_off]
 
 random.shuffle(easylist)
 # random.shuffle(mediumlist)
 random.shuffle(hardlist)
-print('Check contents of hard list',hardlist[0:10])
+print('Check contents of hard list', hardlist[0:10])
 with open('jsons/hardlist.json', "w") as file:
-    json.dump(hardlist,file)
+    json.dump(hardlist, file)
 
 traineasy = easylist[:math.floor(len(easylist)*split[0]/100)]
-val = easylist[math.floor(len(easylist)*split[0]/100)
-                          :math.floor(len(easylist)*(split[0]+split[1])/100)]
+val = easylist[math.floor(len(easylist)*split[0]/100)               :math.floor(len(easylist)*(split[0]+split[1])/100)]
 test = easylist[math.floor(len(easylist)*(split[0]+split[1])/100):]
 
 # the splits are made such that both the difficulties easy and hard,however their percentage have a equal split of train,test,val
@@ -168,18 +168,19 @@ test = easylist[math.floor(len(easylist)*(split[0]+split[1])/100):]
 # test = test + mediumlist[math.floor(len(mediumlist)*(split[0]+split[1])/100):]
 
 trainhard = hardlist[:math.floor(len(hardlist)*split[0]/100)]
-val = val + hardlist[math.floor(len(hardlist)*split[0]/100):math.floor(len(hardlist)*(split[0]+split[1])/100)]
+val = val + hardlist[math.floor(len(hardlist)*split[0]/100)
+                                :math.floor(len(hardlist)*(split[0]+split[1])/100)]
 test = test + hardlist[math.floor(len(hardlist)*(split[0]+split[1])/100):]
-print('Check contents of trainhard',trainhard[0:10])
+print('Check contents of trainhard', trainhard[0:10])
 
 with open('jsons/trainhard.json', "w") as file:
-    json.dump(trainhard,file)
+    json.dump(trainhard, file)
 print("starting train hard")
 labels = {}
 for i, tiffile in enumerate(trainhard):
-    shutil.copy(os.path.join('merged_newdata', tiffile),
+    shutil.copy(os.path.join(path_to_dataset, tiffile),
                 path_to_save + '/train/Hard/images')
-    tiffile = os.path.join('merged_newdata', tiffile)
+    tiffile = os.path.join(path_to_dataset, tiffile)
     make_labels(tiffile, labels, i)
 
 outfile = open(path_to_save + '/train/Hard/labels.json', "w")
@@ -199,9 +200,9 @@ outfile.close()
 print("starting train easy")
 labels = {}
 for i, tiffile in enumerate(traineasy):
-    shutil.copy(os.path.join('merged_newdata', tiffile),
+    shutil.copy(os.path.join(path_to_dataset, tiffile),
                 path_to_save + '/train/Easy/images')
-    tiffile = os.path.join('merged_newdata', tiffile)
+    tiffile = os.path.join(path_to_dataset, tiffile)
     make_labels(tiffile, labels, i)
 
 outfile = open(path_to_save + '/train/Easy/labels.json', "w")
@@ -211,9 +212,9 @@ outfile.close()
 print("starting val")
 labels = {}
 for tiffile in val:
-    shutil.copy(os.path.join('merged_newdata', tiffile),
+    shutil.copy(os.path.join(path_to_dataset, tiffile),
                 path_to_save + '/val/images')
-    tiffile = os.path.join('merged_newdata', tiffile)
+    tiffile = os.path.join(path_to_dataset, tiffile)
     make_labels(tiffile, labels, i)
 
 outfile = open(path_to_save + '/val/labels.json', "w")
@@ -223,9 +224,9 @@ outfile.close()
 print("starting test")
 labels = {}
 for tiffile in test:
-    shutil.copy(os.path.join('merged_newdata', tiffile),
+    shutil.copy(os.path.join(path_to_dataset, tiffile),
                 path_to_save + '/test/images')
-    tiffile = os.path.join('merged_newdata', tiffile)
+    tiffile = os.path.join(path_to_dataset, tiffile)
     make_labels(tiffile, labels, i)
 
 outfile = open(path_to_save + '/test/labels.json', "w")

@@ -88,18 +88,19 @@ class MixedSampler(Sampler[T_co]):
         self.total_size = self.num_samples * self.num_replicas
         self.seed = seed
 
+
     def __iter__(self) -> Iterator[T_co]:
         num_samples_dataset1 = math.ceil(0.7 * self.num_samples)
         num_samples_dataset2 = self.num_samples - num_samples_dataset1
 
         if self.rank < num_samples_dataset1:
-            indices_dataset1 = self.get_indices(self.dataset1, num_samples_dataset1)
+            indices_dataset1 = self.get_indices(self.dataset1, num_samples_dataset1)#8000 #stores the indexes of the images
             indices_dataset2 = self.get_indices(self.dataset2, num_samples_dataset2)
         else:
             indices_dataset1 = self.get_indices(self.dataset1, num_samples_dataset1)
             indices_dataset2 = self.get_indices(self.dataset2, num_samples_dataset2)
 
-        indices = indices_dataset1 + indices_dataset2
+        indices = indices_dataset1 + indices_dataset2 #indices in a batch #combine to make a minibatch
         if self.shuffle:
             g = torch.Generator()
             g.manual_seed(self.seed + self.epoch)
@@ -125,7 +126,7 @@ class MixedSampler(Sampler[T_co]):
         indices = list(range(len(dataset)))
         if len(indices) < num_samples:
             raise ValueError("The dataset does not have enough samples.")
-        return indices[:num_samples]
+        return indices[:num_samples] #70 returned
 
     def set_epoch(self, epoch: int) -> None:
         self.epoch = epoch
@@ -617,7 +618,15 @@ def main(args):
         pin_memory=True,
         collate_fn=val_set.collate_fn
     )
-    print(f"Train set loaded in {time.time() - st:.4}s ({len(train_set)} samples in " f"{len(train_loader)} batches)")
+
+    train_features,train_labels = next(iter(train_loader))
+    # print(train_features[:10])
+    # print(train_labels[:10])
+    print(train_features.shape)
+    print(train_labels.shape)
+
+    print(
+        f"Train set loaded in {time.time() - st:.4}s ({len(combined_dataset)} samples in " f"{len(train_loader)} batches)")
     
     print('After loading data')
     print("Current GPU memory usage (in bytes):", torch.cuda.memory_allocated())
@@ -784,7 +793,7 @@ def parse_args():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
-    #changed
+    #change this to paths in ada server
     parser.add_argument("--easy_train_path", type=str,
                         default="/scratch/sreevatsa/data/train/Easy", help="path to training data folder")  # c
     #parser.add_argument("--medium_train_path", type=str,default="/scratch/sreevatsa/scratch/abhaynew/newfolder/train/Medium", help="path to training data folder")

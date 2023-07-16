@@ -146,7 +146,7 @@ random.shuffle(easylist)
 random.shuffle(mediumlist)
 random.shuffle(hardlist)
 
-traineasy = easylist[:math.floor(len(easylist)*split[0]/100)]
+traineasy = easylist[:math.floor(len(easylist)*split[0]/100)] #split 0 = 60 
 val = easylist[math.floor(len(easylist)*split[0]/100)
                           :math.floor(len(easylist)*(split[0]+split[1])/100)]
 test = easylist[math.floor(len(easylist)*(split[0]+split[1])/100):]

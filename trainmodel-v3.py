@@ -673,7 +673,7 @@ def parse_args():
     #parser.add_argument("--medium_train_path", type=str,default="/scratch/sreevatsa/scratch/abhaynew/newfolder/train/Medium", help="path to training data folder")
     parser.add_argument("--hard_train_path", type=str,
                         default="/scratch/sreevatsa/new_data/train/Hard", help="path to training data folder")  # c
-
+# add hard image paths
     parser.add_argument("--val_path", type=str, default="/scratch/sreevatsa/new_data/val",
                         help="path to validation data folder")
     parser.add_argument("--test_path", type=str,
